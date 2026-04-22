@@ -297,7 +297,7 @@ def eval_policy(task_name,
                     "libx264",
                     "-crf",
                     "23",
-                    f"{TASK_ENV.eval_video_path}/episode{TASK_ENV.test_num}.mp4",
+                    f"{TASK_ENV.eval_video_path}/episode_seed{now_seed}.mp4",
                 ],
                 stdin=subprocess.PIPE,
             )
