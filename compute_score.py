@@ -29,33 +29,44 @@ CLEAN_SEEDS = list(range(5))
 RAND_SEEDS = list(range(15))
 
 
-def get_reward(result_dir: Path) -> float:
+def parse_result(result_dir: Path):
+    """Parse _result.txt. Returns (total_reward, seed_count) or (None, 0).
+    Supports both multi-seed format ("Total reward: X" + "Seeds: [...]")
+    and legacy single-seed format (bare float line).
+    """
     result_file = result_dir / "_result.txt"
     if not result_file.exists():
-        return None
+        return None, 0
     lines = result_file.read_text().strip().splitlines()
-    # line index 4 (0-based) is task_total_reward
+
+    total_reward = None
+    seed_count = 0
+
     for line in lines:
-        line = line.strip()
+        stripped = line.strip()
+        if stripped.startswith("Total reward:"):
+            try:
+                total_reward = float(stripped.split(":", 1)[1].strip())
+            except ValueError:
+                pass
+        elif stripped.startswith("Seeds:"):
+            seeds_str = stripped.split(":", 1)[1].strip()
+            if seeds_str == "[]":
+                seed_count = 0
+            else:
+                seed_count = seeds_str.count(",") + 1
+
+    if total_reward is not None:
+        return total_reward, seed_count
+
+    # Backward compatibility: bare float line = single-seed result
+    for line in lines:
         try:
-            val = float(line)
-            return val
+            total_reward = float(line.strip())
+            return total_reward, 1
         except ValueError:
             continue
-    return None
-
-
-def find_latest_result(base: Path, task, policy, task_config, ckpt_setting) -> float:
-    search = base / task / policy / task_config / ckpt_setting
-    if not search.exists():
-        return None
-    # pick latest timestamp dir
-    dirs = sorted(search.iterdir(), reverse=True)
-    for d in dirs:
-        reward = get_reward(d)
-        if reward is not None:
-            return reward
-    return None
+    return None, 0
 
 
 def main():
@@ -72,7 +83,7 @@ def main():
     # Collect rewards per task across all seeds
 
     task_rewards = defaultdict(float)
-    task_counts = defaultdict(int)
+    task_seed_counts = defaultdict(int)
     missing = []
 
     for task in TASKS:
@@ -82,24 +93,31 @@ def main():
             continue
 
         for policy_dir in task_dir.iterdir():
-            policy = policy_dir.name
+            if not policy_dir.is_dir():
+                continue
             for config_dir in policy_dir.iterdir():
-                task_config = config_dir.name
+                if not config_dir.is_dir():
+                    continue
                 for ckpt_dir in config_dir.iterdir():
-                    ckpt_setting = ckpt_dir.name
+                    if not ckpt_dir.is_dir():
+                        continue
+                    # Use only the latest timestamp dir per config to avoid double-counting
                     for ts_dir in sorted(ckpt_dir.iterdir(), reverse=True):
-                        reward = get_reward(ts_dir)
+                        if not ts_dir.is_dir():
+                            continue
+                        reward, seed_count = parse_result(ts_dir)
                         if reward is not None:
                             task_rewards[task] += reward
-                            task_counts[task] += 1
+                            task_seed_counts[task] += seed_count
+                            break
 
-    print(f"\n{'Task':<30} {'Total Reward':>14} {'Count':>7} {'Score/10':>10}")
+    print(f"\n{'Task':<30} {'Total Reward':>14} {'Seeds':>7} {'Score/10':>10}")
     print("-" * 65)
 
     total_score = 0.0
     for task in TASKS:
         reward = task_rewards.get(task, 0.0)
-        count = task_counts.get(task, 0)
+        count = task_seed_counts.get(task, 0)
         # max reward = 20 (1.0 per seed x 20 seeds) -> normalize to 10
         score = (reward / 20.0) * 10.0
         total_score += score

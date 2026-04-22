@@ -155,36 +155,50 @@ def main(usr_args):
     usr_args["left_arm_dim"] = len(args["left_embodiment_config"]["arm_joints_name"][0])
     usr_args["right_arm_dim"] = len(args["right_embodiment_config"]["arm_joints_name"][1])
 
-    seed = usr_args["seed"]
-    st_seed = seed
+    seeds = usr_args.get("seeds", None)
+    if seeds is None:
+        seeds = [usr_args.get("seed", 0)]
+    elif isinstance(seeds, (int, float)):
+        seeds = [int(seeds)]
+    else:
+        seeds = [int(s) for s in seeds]
 
     suc_nums = []
     test_num = 1
-    topk = 1
-    rewards_list = []
+    total_reward = 0
 
     model = get_model(usr_args)
-    st_seed, suc_num, task_total_reward = eval_policy(task_name,
-                                   TASK_ENV,
-                                   args,
-                                   model,
-                                   st_seed,
-                                   test_num=test_num,
-                                   video_size=video_size,
-                                   instruction_type=instruction_type)
-    suc_nums.append(suc_num)
 
-    topk_success_rate = sorted(suc_nums, reverse=True)[:topk]
+    for seed in seeds:
+        print(f"\n{'='*20} Seed {seed} {'='*20}")
+        st_seed, suc_num, task_total_reward = eval_policy(task_name,
+                                       TASK_ENV,
+                                       args,
+                                       model,
+                                       st_seed=seed,
+                                       test_num=test_num,
+                                       video_size=video_size,
+                                       instruction_type=instruction_type)
+        suc_nums.append(suc_num)
+        total_reward += task_total_reward
+
+    overall_suc = sum(suc_nums)
+    overall_total = len(seeds) * test_num
+    print(f"\n{'='*50}")
+    print(f"Overall success rate: {overall_suc}/{overall_total} = {round(overall_suc/overall_total*100, 1)}%")
+    print(f"{'='*50}")
 
     file_path = os.path.join(save_dir, f"_result.txt")
     with open(file_path, "w") as file:
         file.write(f"Timestamp: {current_time}\n\n")
         file.write(f"Instruction Type: {instruction_type}\n\n")
-        file.write(str(task_total_reward) + '\n')
-        file.write("\n".join(map(str, np.array(suc_nums) / test_num)))
+        file.write(f"Seeds: {seeds}\n\n")
+        file.write(f"Total reward: {total_reward}\n")
+        file.write(f"Success per seed: {suc_nums}\n")
+        file.write(f"Overall: {overall_suc}/{overall_total} = {round(overall_suc/overall_total*100, 1)}%\n")
 
     print(f"Data has been saved to {file_path}")
-    return task_total_reward
+    return total_reward
 
 
 def eval_policy(task_name,

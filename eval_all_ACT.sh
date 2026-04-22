@@ -40,29 +40,34 @@ export place_fan_rand_seeds="0 1 2 3 4 5 6 7 8 9 10 11 12 13 14"
 export stack_blocks_three_rand_seeds="0 1 2 3 4 5 6 7 8 9 10 11 12 13 14"
 
 tasks=(
-    # blocks_ranking_rgb
-    # blocks_ranking_size
-    # handover_mic
-    # move_can_pot
-    # move_stapler_pad
-    # open_microwave
-    # place_can_basket
-    # place_dual_shoes
+    blocks_ranking_rgb
+    blocks_ranking_size
+    handover_mic
+    move_can_pot
+    move_stapler_pad
+    open_microwave
+    place_can_basket
+    place_dual_shoes
     place_fan
-    # stack_blocks_three
+    stack_blocks_three
 )
 
 for task in "${tasks[@]}"; do
     clean_var="${task}_clean_seeds"
     rand_var="${task}_rand_seeds"
 
-    for seed in ${!clean_var}; do
-        echo "Evaluating $task | clean | seed $seed"
-        bash eval_ACT.sh "$task" demo_clean "$ckpt_setting" "$seed" "$gpu_id"
-    done
+    clean_seeds_csv=$(echo ${!clean_var} | tr ' ' ',')
+    rand_seeds_csv=$(echo ${!rand_var} | tr ' ' ',')
 
-    for seed in ${!rand_var}; do
-        echo "Evaluating $task | randomized | seed $seed"
-        bash eval_ACT.sh "$task" demo_randomized "$ckpt_setting" "$seed" "$gpu_id"
-    done
+    echo "Evaluating $task | clean | seeds: ${!clean_var}"
+    bash eval_ACT.sh "$task" demo_clean "$ckpt_setting" "$clean_seeds_csv" "$gpu_id"
+
+    echo "Evaluating $task | randomized | seeds: ${!rand_var}"
+    bash eval_ACT.sh "$task" demo_randomized "$ckpt_setting" "$rand_seeds_csv" "$gpu_id"
 done
+
+echo ""
+echo "=========================================="
+echo "Computing final benchmark score..."
+echo "=========================================="
+python3 compute_score.py | tee eval_result.txt
