@@ -3,9 +3,10 @@
 policy_name=Your_Policy # [TODO] 
 task_name=${1}
 task_config=${2}
-ckpt_setting=${3}
-seed=${4}
-gpu_id=${5}
+policy_name=${3}
+ckpt_setting=${4}
+seed=${5}
+gpu_id=${6}
 
 export CUDA_VISIBLE_DEVICES=${gpu_id}
 echo -e "\033[33mgpu id (to use): ${gpu_id}\033[0m"
