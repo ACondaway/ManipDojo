@@ -52,9 +52,9 @@ Specific criteria are as follows:
 
 
 
-# 以 PI0 为模板的 RoboTwin 整体 Pipeline 运行教程
+# 以 PI0 为模板的 ManipDojo 整体 Pipeline 运行教程
 
-本文档记录如何基于 **PI0 / OpenPI** 模板，在 **RoboTwin / ManipDojo** 环境中完成从环境安装、数据生成、数据转换、模型训练到最终评测的完整流程。
+本文档记录如何基于 **PI0** 模板，在 **ManipDojo** 环境中完成从环境安装、数据生成、数据转换、模型训练到最终评测的完整流程。
 
 ---
 
